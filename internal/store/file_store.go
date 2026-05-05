@@ -24,29 +24,13 @@ func (f *FileStore) Write(data []byte) error {
 		return fmt.Errorf("create parent directory: %w", err)
 	}
 
-	tmp, err := os.CreateTemp(dir, ".passmgr-*.tmp")
-	if err != nil {
-		return fmt.Errorf("create temp file: %w", err)
-	}
-	tmpPath := tmp.Name()
+	tmpPath := f.path + ".tmp"
 	defer func() {
 		_ = os.Remove(tmpPath)
 	}()
 
-	if err := tmp.Chmod(0600); err != nil {
-		_ = tmp.Close()
-		return fmt.Errorf("set temp file permissions: %w", err)
-	}
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
+	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
 		return fmt.Errorf("write temp file: %w", err)
-	}
-	if err := tmp.Sync(); err != nil {
-		_ = tmp.Close()
-		return fmt.Errorf("sync temp file: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("close temp file: %w", err)
 	}
 	if err := os.Rename(tmpPath, f.path); err != nil {
 		return fmt.Errorf("rename temp file: %w", err)

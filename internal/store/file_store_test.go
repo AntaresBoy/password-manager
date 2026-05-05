@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -35,6 +36,26 @@ func TestFileStoreReadWriteExistsPath(t *testing.T) {
 	}
 }
 
+func TestFileStoreOverwriteReplacesExistingContent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "vault.dat")
+	store := NewFileStore(path)
+
+	if err := store.Write([]byte("first vault")); err != nil {
+		t.Fatalf("first Write() returned error: %v", err)
+	}
+	if err := store.Write([]byte("second vault")); err != nil {
+		t.Fatalf("second Write() returned error: %v", err)
+	}
+
+	got, err := store.Read()
+	if err != nil {
+		t.Fatalf("Read() returned error: %v", err)
+	}
+	if string(got) != "second vault" {
+		t.Fatalf("Read() = %q, want %q", got, "second vault")
+	}
+}
+
 func TestFileStoreReadMissingReturnsError(t *testing.T) {
 	store := NewFileStore(filepath.Join(t.TempDir(), "missing.dat"))
 
@@ -62,6 +83,40 @@ func TestFileStoreWriteCreatesParentDirectory(t *testing.T) {
 
 	if runtime.GOOS != "windows" && info.Mode().Perm() != 0700 {
 		t.Fatalf("parent directory mode = %o, want 700", info.Mode().Perm())
+	}
+}
+
+func TestFileStoreWriteFailsWhenParentPathIsFile(t *testing.T) {
+	parentFile := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(parentFile, []byte("file"), 0600); err != nil {
+		t.Fatalf("WriteFile() returned error: %v", err)
+	}
+	store := NewFileStore(filepath.Join(parentFile, "vault.dat"))
+
+	err := store.Write([]byte("vault"))
+
+	if err == nil {
+		t.Fatal("Write() error = nil, want an error")
+	}
+	if !strings.Contains(err.Error(), "create parent directory") {
+		t.Fatalf("Write() error = %q, want parent directory context", err.Error())
+	}
+}
+
+func TestFileStoreWriteFailsWhenDestinationIsDirectory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "vault.dat")
+	if err := os.Mkdir(path, 0700); err != nil {
+		t.Fatalf("Mkdir() returned error: %v", err)
+	}
+	store := NewFileStore(path)
+
+	err := store.Write([]byte("vault"))
+
+	if err == nil {
+		t.Fatal("Write() error = nil, want an error")
+	}
+	if !strings.Contains(err.Error(), "rename temp file") {
+		t.Fatalf("Write() error = %q, want rename context", err.Error())
 	}
 }
 
