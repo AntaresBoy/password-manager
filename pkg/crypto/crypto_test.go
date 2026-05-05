@@ -124,6 +124,15 @@ func TestGenerateSaltLengthAndUniqueness(t *testing.T) {
 	}
 }
 
+func TestGenerateSaltRejectsInvalidLength(t *testing.T) {
+	if _, err := GenerateSalt(0); err == nil {
+		t.Fatal("expected zero-length salt to fail")
+	}
+	if _, err := GenerateSalt(-1); err == nil {
+		t.Fatal("expected negative-length salt to fail")
+	}
+}
+
 func TestGenerateNonceLengthAndUniqueness(t *testing.T) {
 	nonce1, err := GenerateNonce()
 	if err != nil {

@@ -66,6 +66,10 @@ func Decrypt(salt, nonce, ciphertext []byte, password string) ([]byte, error) {
 }
 
 func GenerateSalt(length int) ([]byte, error) {
+	if length <= 0 {
+		return nil, errors.New("salt length must be positive")
+	}
+
 	salt := make([]byte, length)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		return nil, err
