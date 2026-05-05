@@ -6,7 +6,7 @@ Implement the approved `passmgr` MVP as a local command-line password manager. T
 
 ## Scope
 
-- Build a Go 1.22+ CLI application named `passmgr`.
+- Build a Go 1.23+ CLI application named `passmgr`.
 - Store all vault data in a local encrypted file.
 - Derive encryption keys from the master password with Argon2id.
 - Encrypt vault payloads with AES-256-GCM.
