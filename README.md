@@ -23,7 +23,89 @@
 
 当前限制：交互式主密码输入使用普通行读取，输入时会回显。自动化场景建议使用 `PASSMGR_MASTER_PASSWORD`。
 
-## 快速开始
+## 安装包验证
+
+当前工作区已生成 macOS Apple Silicon 安装包：
+
+```bash
+dist/passmgr-darwin-arm64-install.tar.gz
+dist/passmgr-darwin-arm64-install.tar.gz.sha256
+```
+
+进入项目目录：
+
+```bash
+cd /Users/antares/Documents/02_Study/04_My_project/password-manager/.worktrees/implement-passmgr-mvp
+```
+
+校验安装包：
+
+```bash
+shasum -a 256 -c dist/passmgr-darwin-arm64-install.tar.gz.sha256
+```
+
+期望输出：
+
+```text
+dist/passmgr-darwin-arm64-install.tar.gz: OK
+```
+
+解压安装包：
+
+```bash
+mkdir -p /tmp/passmgr-verify
+tar -xzf dist/passmgr-darwin-arm64-install.tar.gz -C /tmp/passmgr-verify
+cd /tmp/passmgr-verify/passmgr-darwin-arm64
+```
+
+直接运行验证：
+
+```bash
+./passmgr gen --length 16
+```
+
+如果输出一串随机密码，说明二进制可运行。
+
+## 安装
+
+建议先安装到用户目录验证，不要一开始就写入系统目录：
+
+```bash
+mkdir -p "$HOME/bin"
+./install.sh "$HOME/bin"
+```
+
+如果 `$HOME/bin` 不在 `PATH`，临时加入：
+
+```bash
+export PATH="$HOME/bin:$PATH"
+```
+
+验证安装：
+
+```bash
+passmgr gen --length 16
+```
+
+如需安装到 `/usr/local/bin`：
+
+```bash
+sudo ./install.sh
+```
+
+卸载用户目录安装：
+
+```bash
+rm -f "$HOME/bin/passmgr"
+```
+
+卸载系统目录安装：
+
+```bash
+sudo rm -f /usr/local/bin/passmgr
+```
+
+## 快速开始和功能验证
 
 构建当前平台二进制：
 
@@ -80,19 +162,117 @@ PASSMGR_MASTER_PASSWORD='change-me' \
 ./dist/passmgr gen --length 20
 ```
 
-## 分发包
+## 完整验证流程
 
-当前工作区已生成 macOS Apple Silicon 分发包：
+下面流程使用临时 vault，不影响真实数据。
+
+清理旧测试文件：
 
 ```bash
-dist/passmgr-darwin-arm64.tar.gz
-dist/passmgr-darwin-arm64.tar.gz.sha256
+rm -f /tmp/passmgr-test-vault.dat
 ```
 
-校验：
+初始化 vault：
 
 ```bash
-shasum -a 256 -c dist/passmgr-darwin-arm64.tar.gz.sha256
+PASSMGR_MASTER_PASSWORD='testpass' \
+PASSMGR_MASTER_PASSWORD_CONFIRM='testpass' \
+passmgr --vault-path /tmp/passmgr-test-vault.dat init
+```
+
+添加账号：
+
+```bash
+PASSMGR_MASTER_PASSWORD='testpass' \
+passmgr --vault-path /tmp/passmgr-test-vault.dat add github -u antares -p 'secret123' --url github.com --notes dev
+```
+
+列出账号：
+
+```bash
+PASSMGR_MASTER_PASSWORD='testpass' \
+passmgr --vault-path /tmp/passmgr-test-vault.dat list
+```
+
+期望看到类似：
+
+```text
+Name    Username    URL         Tags
+github  antares     github.com
+```
+
+查看账号，默认隐藏密码：
+
+```bash
+PASSMGR_MASTER_PASSWORD='testpass' \
+passmgr --vault-path /tmp/passmgr-test-vault.dat get github
+```
+
+期望密码显示为：
+
+```text
+Password: ********
+```
+
+查看明文密码：
+
+```bash
+PASSMGR_MASTER_PASSWORD='testpass' \
+passmgr --vault-path /tmp/passmgr-test-vault.dat get github --show-password
+```
+
+期望看到：
+
+```text
+Password: secret123
+```
+
+错误主密码验证：
+
+```bash
+PASSMGR_MASTER_PASSWORD='wrong' \
+passmgr --vault-path /tmp/passmgr-test-vault.dat list
+```
+
+期望输出：
+
+```text
+Error: wrong master password
+```
+
+删除账号：
+
+```bash
+PASSMGR_MASTER_PASSWORD='testpass' \
+passmgr --vault-path /tmp/passmgr-test-vault.dat rm github --yes
+```
+
+再次查看应失败：
+
+```bash
+PASSMGR_MASTER_PASSWORD='testpass' \
+passmgr --vault-path /tmp/passmgr-test-vault.dat get github
+```
+
+期望输出：
+
+```text
+Error: entry not found
+```
+
+验证 vault 不是明文：
+
+```bash
+strings /tmp/passmgr-test-vault.dat | grep -E 'secret123|antares|github'
+```
+
+正常情况下不应输出明文账号或密码。
+
+清理测试文件：
+
+```bash
+rm -f /tmp/passmgr-test-vault.dat
+rm -rf /tmp/passmgr-verify
 ```
 
 ## 开发
@@ -119,6 +299,16 @@ GOCACHE=$PWD/.gocache GOMODCACHE=$PWD/.gomodcache GOPROXY=off go test ./...
 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o dist/passmgr ./cmd/passmgr
 tar -C dist -czf dist/passmgr-darwin-arm64.tar.gz passmgr README-passmgr.txt
 shasum -a 256 dist/passmgr-darwin-arm64.tar.gz > dist/passmgr-darwin-arm64.tar.gz.sha256
+```
+
+构建安装包：
+
+```bash
+mkdir -p dist/package/passmgr-darwin-arm64
+GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o dist/package/passmgr-darwin-arm64/passmgr ./cmd/passmgr
+cp README.md docs/passmgr-usage-development.md dist/package/passmgr-darwin-arm64/
+tar -C dist/package -czf dist/passmgr-darwin-arm64-install.tar.gz passmgr-darwin-arm64
+shasum -a 256 dist/passmgr-darwin-arm64-install.tar.gz > dist/passmgr-darwin-arm64-install.tar.gz.sha256
 ```
 
 ## 目录结构
