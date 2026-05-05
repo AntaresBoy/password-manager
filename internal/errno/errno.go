@@ -28,8 +28,9 @@ func (e *Error) Unwrap() error {
 }
 
 func (e *Error) WithCause(cause error) *Error {
-	e.cause = cause
-	return e
+	wrapped := *e
+	wrapped.cause = cause
+	return &wrapped
 }
 
 var (

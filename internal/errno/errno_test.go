@@ -26,11 +26,37 @@ func TestErrorWithCause(t *testing.T) {
 	if got := err.Unwrap(); got != nil {
 		t.Fatalf("Unwrap() before WithCause = %v, want nil", got)
 	}
-	if got := err.WithCause(cause); got != err {
-		t.Fatalf("WithCause() returned different error instance")
+	wrapped := err.WithCause(cause)
+	if wrapped == err {
+		t.Fatalf("WithCause() returned the original error instance")
 	}
-	if got := err.Unwrap(); got != cause {
-		t.Fatalf("Unwrap() after WithCause = %v, want %v", got, cause)
+	if got := err.Unwrap(); got != nil {
+		t.Fatalf("Unwrap() on original error after WithCause = %v, want nil", got)
+	}
+	if got := wrapped.Unwrap(); got != cause {
+		t.Fatalf("Unwrap() on wrapped error = %v, want %v", got, cause)
+	}
+	if got := wrapped.Code(); got != err.Code() {
+		t.Fatalf("wrapped Code() = %d, want %d", got, err.Code())
+	}
+	if got := wrapped.Error(); got != err.Error() {
+		t.Fatalf("wrapped Error() = %q, want %q", got, err.Error())
+	}
+	if got := wrapped.ExitCode(); got != err.ExitCode() {
+		t.Fatalf("wrapped ExitCode() = %d, want %d", got, err.ExitCode())
+	}
+}
+
+func TestPredefinedErrorWithCauseDoesNotMutateSingleton(t *testing.T) {
+	cause := errors.New("disk full")
+
+	wrapped := ErrInternal.WithCause(cause)
+
+	if got := wrapped.Unwrap(); got != cause {
+		t.Fatalf("wrapped Unwrap() = %v, want %v", got, cause)
+	}
+	if got := ErrInternal.Unwrap(); got != nil {
+		t.Fatalf("ErrInternal.Unwrap() = %v, want nil", got)
 	}
 }
 
