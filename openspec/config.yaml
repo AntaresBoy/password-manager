@@ -1,0 +1,30 @@
+# openspec/config.yaml
+schema: sdd-plus-superpowers   # 启用 Superpowers 集成模式
+
+context: |
+  ## 项目上下文
+  - 前端: Vue3 + TypeScript + Vite + Vitest + Cypress
+  - 后端: Go + Gin
+  - 质量红线:
+    1. Superpowers TDD 强制: RED-GREEN-REFACTOR，先写测试后写代码
+    2. 双测试: 单元测试(Vitest) + E2E 测试(Cypress)
+    3. 覆盖率门禁: Lines ≥ 80%, Branches ≥ 70%, Functions ≥ 80%
+    4. 代码审查: Superpowers requesting-code-review 两阶段审查（规格合规 + 代码质量）
+    5. 输出报告: HTML + JSON 到 openspec/reports/
+    6. 自动提交: apply 完成后 git commit + push
+    7. 飞书通知: apply 无论成败均推送卡片消息
+
+  ## 规范索引
+  - 前端规范: @openspec/specs/fe.md
+  - 前端测试规范: @openspec/specs/fe-testing.md
+  - UI设计规范: @openspec/specs/ui.md
+  - 后端规范: @openspec/specs/be.md
+  - 代码提交规范: @openspec/specs/git-commit-spec.md
+
+# 可选：自定义 skill 注册
+skills:
+  - openspec-propose
+  - openspec-apply
+  - sdd-superpowers-gate      # 自定义主控 skill（见下文）
+  - requesting-code-review    # Superpowers 官方审查 skill
+  - test-driven-development     # Superpowers 官方 TDD skill
