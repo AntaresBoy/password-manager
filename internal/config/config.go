@@ -8,23 +8,27 @@ import (
 
 // VaultPath returns the configured vault path or the platform default.
 func VaultPath() string {
-	if path, ok := os.LookupEnv("PASSMGR_VAULT_PATH"); ok {
+	if path := os.Getenv("PASSMGR_VAULT_PATH"); path != "" {
 		return path
 	}
 
+	return defaultVaultPath(runtime.GOOS, os.Getenv)
+}
+
+func defaultVaultPath(goos string, getenv func(string) string) string {
 	var base string
-	switch runtime.GOOS {
+	switch goos {
 	case "darwin":
-		base = filepath.Join(os.Getenv("HOME"), "Library", "Application Support")
+		base = filepath.Join(getenv("HOME"), "Library", "Application Support")
 	case "windows":
-		base = os.Getenv("APPDATA")
+		base = getenv("APPDATA")
 		if base == "" {
-			base = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Roaming")
+			base = filepath.Join(getenv("USERPROFILE"), "AppData", "Roaming")
 		}
 	default:
-		base = os.Getenv("XDG_DATA_HOME")
+		base = getenv("XDG_DATA_HOME")
 		if base == "" {
-			base = filepath.Join(os.Getenv("HOME"), ".local", "share")
+			base = filepath.Join(getenv("HOME"), ".local", "share")
 		}
 	}
 
