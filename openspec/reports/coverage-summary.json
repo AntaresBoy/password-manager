@@ -1,0 +1,11 @@
+{
+  "total": {
+    "lines": {
+      "pct": 21.8
+    },
+    "statements": {
+      "pct": 21.8
+    }
+  },
+  "note": "Coverage gate was skipped by user request; this value is measured from go test ./... -coverprofile=coverage.out."
+}
